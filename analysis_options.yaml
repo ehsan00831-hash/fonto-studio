@@ -1,0 +1,11 @@
+include: package:flutter_lints/flutter.yaml
+
+linter:
+  rules:
+    prefer_const_constructors: true
+    avoid_print: true
+
+analyzer:
+  errors:
+    # Keep the tree building on CI; style issues are warnings, not failures.
+    todo: ignore
