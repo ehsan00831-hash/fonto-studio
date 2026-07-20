@@ -46,6 +46,10 @@ subprojects {
 KOTLIN
 fi
 
+# Human-readable launcher name (the template uses the raw project name).
+MANIFEST="android/app/src/main/AndroidManifest.xml"
+sed -i 's/android:label="fonto_studio"/android:label="Fonto Studio"/' "$MANIFEST"
+
 echo "prepare_android: patched. app compileSdk ->"
 grep -nE "compileSdk|targetSdk|minSdk" "$APP_GRADLE" || true
 echo "prepare_android: root override appended ->"

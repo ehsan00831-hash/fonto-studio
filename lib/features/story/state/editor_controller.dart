@@ -99,8 +99,15 @@ class EditorController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setCanvasSize(CanvasSize s) {
+  void setCanvasSize(CanvasSize s, {double? width, double? height}) {
     _doc.size = s;
+    if (width != null) _doc.customWidth = width.clamp(64, 8000);
+    if (height != null) _doc.customHeight = height.clamp(64, 8000);
+    _commit();
+  }
+
+  void setExportScale(int scale) {
+    _doc.exportScale = scale.clamp(1, 4);
     _commit();
   }
 
@@ -146,6 +153,57 @@ class EditorController extends ChangeNotifier {
     if (l == null) return;
     _doc.layers.remove(l);
     _doc.layers.add(l);
+    _commit();
+  }
+
+  // ---- layer management -----------------------------------------------------
+
+  /// Reorders in *panel* order (topmost first), which is the reverse of paint
+  /// order. Indices come from ReorderableListView.onReorderItem, so newIndex is
+  /// already post-removal; reversing the list and reinserting is exact.
+  void reorderLayers(int oldPanelIndex, int newPanelIndex) {
+    final int n = _doc.layers.length;
+    if (n < 2) return;
+    if (oldPanelIndex < 0 || oldPanelIndex >= n) return;
+    final List<TextLayer> panel = _doc.layers.reversed.toList();
+    final TextLayer moved = panel.removeAt(oldPanelIndex);
+    panel.insert(newPanelIndex.clamp(0, panel.length), moved);
+    _doc.layers = panel.reversed.toList();
+    _commit();
+  }
+
+  void duplicateLayer(String id) {
+    final int idx = _doc.layers.indexWhere((TextLayer l) => l.id == id);
+    if (idx == -1) return;
+    final TextLayer copy = TextLayer.fromJson(_doc.layers[idx].toJson());
+    final TextLayer dup = TextLayer.fromJson(copy.toJson()..['id'] = _newId());
+    dup.dx = (dup.dx + 0.04).clamp(0.0, 1.0);
+    dup.dy = (dup.dy + 0.04).clamp(0.0, 1.0);
+    _doc.layers.insert(idx + 1, dup);
+    _selectedId = dup.id;
+    _commit();
+  }
+
+  void deleteLayer(String id) {
+    _doc.layers.removeWhere((TextLayer l) => l.id == id);
+    if (_selectedId == id) _selectedId = null;
+    _commit();
+  }
+
+  void toggleVisible(String id) {
+    for (final TextLayer l in _doc.layers) {
+      if (l.id == id) l.visible = !l.visible;
+    }
+    _commit();
+  }
+
+  void toggleLock(String id) {
+    for (final TextLayer l in _doc.layers) {
+      if (l.id == id) {
+        l.locked = !l.locked;
+        if (l.locked && _selectedId == id) _selectedId = null;
+      }
+    }
     _commit();
   }
 
@@ -225,16 +283,30 @@ class EditorController extends ChangeNotifier {
 
   // ---- export ---------------------------------------------------------------
 
-  /// Renders the canvas to PNG bytes at full document resolution.
+  /// Renders the canvas to PNG bytes at the document's full export resolution.
+  ///
+  /// The RepaintBoundary wraps only the document content — the checkerboard and
+  /// the editor chrome sit outside it — so when the background is
+  /// [BackgroundKind.transparent] nothing paints and the PNG keeps alpha 0.
+  /// `toImage` preserves the alpha channel; PNG encoding keeps it.
   Future<Uint8List?> renderPng() async {
+    final ui.Image? image = await renderImage();
+    if (image == null) return null;
+    final ByteData? data = await image.toByteData(format: ui.ImageByteFormat.png);
+    image.dispose();
+    return data?.buffer.asUint8List();
+  }
+
+  /// Raw image at export resolution — used by the PNG encoder and by tests that
+  /// need to inspect pixels (e.g. verifying transparency).
+  Future<ui.Image?> renderImage() async {
     final RenderRepaintBoundary? boundary =
         exportKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
     if (boundary == null) return null;
     final Size shown = boundary.size;
-    final double pixelRatio = _doc.size.pixels.width / shown.width;
-    final ui.Image image = await boundary.toImage(pixelRatio: pixelRatio);
-    final ByteData? data = await image.toByteData(format: ui.ImageByteFormat.png);
-    return data?.buffer.asUint8List();
+    if (shown.width <= 0) return null;
+    final double pixelRatio = _doc.exportPixels.width / shown.width;
+    return boundary.toImage(pixelRatio: pixelRatio);
   }
 
   Future<File?> exportToFile() async {
@@ -242,7 +314,9 @@ class EditorController extends ChangeNotifier {
     if (bytes == null) return null;
     final Directory dir = await getTemporaryDirectory();
     final String safe = _doc.name.replaceAll(RegExp(r'\s+'), '_');
-    final File f = File('${dir.path}/${safe}_${_doc.size.pixels.width.toInt()}.png');
+    final Size px = _doc.exportPixels;
+    final File f =
+        File('${dir.path}/${safe}_${px.width.toInt()}x${px.height.toInt()}.png');
     await f.writeAsBytes(bytes);
     return f;
   }

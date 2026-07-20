@@ -76,4 +76,27 @@ class S {
   String get exported => get('خروجی آماده شد', 'Export ready');
   String get noDrafts => get('پیش‌نویسی نیست', 'No drafts yet');
   String get nothingSelected => get('یک لایه انتخاب کن', 'Select a layer');
+
+  // v0.2 — layers, zoom, export
+  String get layers => get('لایه‌ها', 'Layers');
+  String get noLayers => get('هنوز لایه‌ای نیست — با + متن اضافه کن',
+      'No layers yet — add text with +');
+  String get visibility => get('نمایش', 'Visibility');
+  String get lock => get('قفل', 'Lock');
+  String get locked => get('قفل‌شده', 'locked');
+  String get duplicate => get('تکثیر', 'Duplicate');
+  String get style => get('استایل', 'Style');
+  String get zoomIn => get('بزرگ‌نمایی', 'Zoom in');
+  String get zoomOut => get('کوچک‌نمایی', 'Zoom out');
+  String get fitToScreen => get('اندازهٔ صفحه', 'Fit to screen');
+  String get resolution => get('رزولوشن خروجی', 'Export resolution');
+  String get customSize => get('اندازهٔ دلخواه', 'Custom size');
+  String get widthPx => get('پهنا (px)', 'Width (px)');
+  String get heightPx => get('ارتفاع (px)', 'Height (px)');
+  String get apply => get('اعمال', 'Apply');
+  String get savePng => get('ذخیره PNG', 'Save PNG');
+  String get sharePng => get('اشتراک PNG', 'Share PNG');
+  String get transparentHint => get(
+      'پس‌زمینه شفاف است؛ PNG خروجی هم شفاف خواهد بود.',
+      'Background is transparent; the exported PNG will be too.');
 }

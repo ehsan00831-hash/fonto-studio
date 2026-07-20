@@ -36,6 +36,8 @@ class TextLayer {
     this.boxColorValue = 0x99000000,
     this.boxRadius = 16,
     this.boxPadding = 14,
+    this.visible = true,
+    this.locked = false,
   });
 
   final String id;
@@ -78,6 +80,17 @@ class TextLayer {
   int boxColorValue;
   double boxRadius;
   double boxPadding;
+
+  // layer management
+  bool visible;
+  bool locked;
+
+  /// Short label for the layers panel.
+  String get displayName {
+    final String t = text.trim().replaceAll('\n', ' ');
+    if (t.isEmpty) return 'Empty';
+    return t.length <= 22 ? t : '${t.substring(0, 22)}…';
+  }
 
   static const List<FontWeight> weights = <FontWeight>[
     FontWeight.w100,
@@ -127,6 +140,8 @@ class TextLayer {
         'boxColorValue': boxColorValue,
         'boxRadius': boxRadius,
         'boxPadding': boxPadding,
+        'visible': visible,
+        'locked': locked,
       };
 
   factory TextLayer.fromJson(Map<String, dynamic> j) {
@@ -163,6 +178,8 @@ class TextLayer {
       boxColorValue: i('boxColorValue', 0x99000000),
       boxRadius: d('boxRadius', 16),
       boxPadding: d('boxPadding', 14),
+      visible: j['visible'] as bool? ?? true,
+      locked: j['locked'] as bool? ?? false,
     );
   }
 }

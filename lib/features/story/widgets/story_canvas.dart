@@ -1,50 +1,83 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
+import '../../../shared/checkerboard.dart';
 import '../models/story_document.dart';
 import '../models/text_layer.dart';
 import '../state/editor_controller.dart';
 import 'text_layer_view.dart';
 
-/// The editable canvas: background + text layers, wrapped in a RepaintBoundary
-/// so it can be captured to PNG. Handles selection, drag, pinch-scale and
-/// rotate on the selected layer.
+/// The editable document surface.
+///
+/// Layering, outermost first:
+///   InteractiveViewer  — zoom & pan (chrome, never exported)
+///     AspectRatio      — locks the document's aspect ratio
+///       Stack
+///         checkerboard — transparency indicator, OUTSIDE the boundary
+///         RepaintBoundary(exportKey) — exactly what gets exported
+///           background + visible text layers
 class StoryCanvas extends StatelessWidget {
-  const StoryCanvas({super.key, this.interactive = true});
+  const StoryCanvas({
+    super.key,
+    this.interactive = true,
+    this.transformationController,
+  });
 
   final bool interactive;
+  final TransformationController? transformationController;
 
   @override
   Widget build(BuildContext context) {
     final EditorController c = context.watch<EditorController>();
     final StoryDocument doc = c.doc;
-    final Size docSize = doc.size.pixels;
 
-    return Center(
+    final Widget canvas = Center(
       child: AspectRatio(
-        aspectRatio: docSize.width / docSize.height,
+        aspectRatio: doc.aspectRatio,
         child: LayoutBuilder(
           builder: (BuildContext context, BoxConstraints cons) {
             final double displayW = cons.maxWidth;
             final double displayH = cons.maxHeight;
-            final double k = displayW / docSize.width;
+            final double k = displayW / doc.pixels.width;
 
-            return RepaintBoundary(
-              key: c.exportKey,
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: interactive ? () => c.select(null) : null,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: <Widget>[
-                    _background(doc),
-                    for (final TextLayer layer in doc.layers)
-                      _positioned(context, c, layer, displayW, displayH, k),
-                  ],
+            return Stack(
+              fit: StackFit.expand,
+              children: <Widget>[
+                // Outside the boundary on purpose: never exported.
+                if (doc.isTransparent)
+                  const CustomPaint(painter: CheckerboardPainter(dark: true)),
+                RepaintBoundary(
+                  key: c.exportKey,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: <Widget>[
+                      _background(doc),
+                      for (final TextLayer layer in doc.visibleLayers)
+                        _positioned(context, c, layer, displayW, displayH, k),
+                    ],
+                  ),
                 ),
-              ),
+              ],
             );
           },
+        ),
+      ),
+    );
+
+    if (!interactive) return canvas;
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => c.select(null),
+      child: InteractiveViewer(
+        transformationController: transformationController,
+        minScale: 0.3,
+        maxScale: 6,
+        boundaryMargin: const EdgeInsets.all(360),
+        clipBehavior: Clip.none,
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: canvas,
         ),
       ),
     );
@@ -53,6 +86,7 @@ class StoryCanvas extends StatelessWidget {
   Widget _background(StoryDocument doc) {
     switch (doc.backgroundKind) {
       case BackgroundKind.transparent:
+        // Paints nothing: the exported PNG keeps alpha 0 here.
         return const SizedBox.expand();
       case BackgroundKind.solid:
         return ColoredBox(color: doc.backgroundColor);
@@ -79,21 +113,25 @@ class StoryCanvas extends StatelessWidget {
   ) {
     final bool selected = interactive && c.selectedId == layer.id;
 
-    Widget child = Container(
-      decoration: selected
-          ? BoxDecoration(
-              border: Border.all(
-                color: Theme.of(context).colorScheme.primary,
-                width: 1.5,
-              ),
-              borderRadius: BorderRadius.circular(4),
-            )
-          : null,
-      padding: const EdgeInsets.all(6),
-      child: TextLayerView(layer: layer, k: k),
-    );
+    Widget child = TextLayerView(layer: layer, k: k);
 
-    if (interactive) {
+    if (selected) {
+      child = Container(
+        decoration: BoxDecoration(
+          border: Border.all(
+            color: Theme.of(context).colorScheme.primary,
+            width: 1.5,
+          ),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        padding: const EdgeInsets.all(4),
+        child: child,
+      );
+    } else {
+      child = Padding(padding: const EdgeInsets.all(4), child: child);
+    }
+
+    if (interactive && !layer.locked) {
       double baseScale = 1;
       double baseRotation = 0;
       child = GestureDetector(
