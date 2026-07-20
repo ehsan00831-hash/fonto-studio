@@ -9,6 +9,9 @@ ThemeData buildTheme(Color accent, Brightness brightness) {
   return ThemeData(
     useMaterial3: true,
     colorScheme: scheme,
+    // Bundled OFL family with both Persian and Latin glyphs, so UI labels
+    // render consistently instead of relying on platform font fallback.
+    fontFamily: 'Vazirmatn',
     scaffoldBackgroundColor: brightness == Brightness.dark
         ? const Color(0xFF0E1016)
         : scheme.surface,

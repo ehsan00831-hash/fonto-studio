@@ -2,9 +2,22 @@
 
 A standalone, offline-first Persian/Arabic **text-on-image story editor** for Android, built with Flutter. Independent design inspired by the Fonto workflow — no proprietary logos or assets are copied.
 
-> Status: **MVP**. Story editor, Gallery and Settings are functional. CI builds an installable release APK.
+> Status: **v0.2 — editor redesign**. Story editor, Gallery and Settings are functional. CI builds an installable release APK.
+
+![Editor](docs/ui-editor.png)
 
 ## Features
+
+### Story editor (v0.2)
+- **Canvas-first layout** — the document owns the screen; every tool opens in a
+  draggable sheet over it instead of permanently stealing height
+- **Zoom & pan** (pinch or the toolbar controls) with a live zoom readout and fit-to-screen
+- **Layer management** — reorderable stack with per-layer visibility, lock,
+  duplicate and delete
+- **Aspect ratios** — 9:16, 4:5, 3:4, 1:1, 16:9, 1.91:1, 2:3, plus a free-form custom size
+- **High-resolution export** — 1x/2x/3x/4x multiplier (up to 4320×7680 from a story canvas)
+- **True transparent PNG** — the checkerboard is drawn outside the export
+  boundary, so a transparent background exports with alpha 0 (verified by test)
 
 ### Story editor
 - Multiple text layers, Persian & English, **RTL / LTR** per layer
