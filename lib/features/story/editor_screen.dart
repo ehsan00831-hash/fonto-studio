@@ -28,9 +28,9 @@ class EditorScreen extends StatelessWidget {
           ),
         ),
         _actionBar(context, c, s),
-        Expanded(
+        const Expanded(
           flex: 4,
-          child: const InspectorPanel(),
+          child: InspectorPanel(),
         ),
       ],
     );

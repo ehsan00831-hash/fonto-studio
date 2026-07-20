@@ -29,7 +29,7 @@ jobs:
         run: flutter --version
 
       - name: Generate Android platform files
-        run: flutter create --platforms=android --org com.fontostudio --project-name fonto_studio .
+        run: bash tool/prepare_android.sh
 
       - name: Install dependencies
         run: flutter pub get

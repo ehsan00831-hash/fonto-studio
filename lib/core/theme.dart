@@ -13,7 +13,7 @@ ThemeData buildTheme(Color accent, Brightness brightness) {
         ? const Color(0xFF0E1016)
         : scheme.surface,
     sliderTheme: const SliderThemeData(
-      showValueIndicator: ShowValueIndicator.always,
+      showValueIndicator: ShowValueIndicator.onDrag,
     ),
     appBarTheme: AppBarTheme(
       backgroundColor: brightness == Brightness.dark
